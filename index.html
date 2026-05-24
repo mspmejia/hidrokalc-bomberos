@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HidroCalc — Cuerpo de Bomberos</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600;700&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rojo: #D32F2F;
+    --rojo-vivo: #FF1A1A;
+    --naranja: #FF6600;
+    --amarillo: #FFD600;
+    --negro: #0A0A0A;
+    --gris-oscuro: #111111;
+    --gris-panel: #1A1A1A;
+    --gris-borde: #2A2A2A;
+    --gris-mid: #333333;
+    --blanco: #F5F5F0;
+    --verde-ok: #00C853;
+    --cyan: #00B0FF;
+    --alerta: #FF6D00;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--negro);
+    color: var(--blanco);
+    font-family: 'Barlow Condensed', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* FONDO ANIMADO */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse 80% 40% at 50% -10%, rgba(211,47,47,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 30% at 100% 100%, rgba(255,102,0,0.08) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: relative;
+    z-index: 10;
+    background: linear-gradient(180deg, #1a0000 0%, var(--gris-oscuro) 100%);
+    border-bottom: 2px solid var(--rojo);
+    padding: 0;
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+  }
+
+  .header-text h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 3px;
+    color: var(--rojo-vivo);
+    line-height: 1;
+  }
+
+  .header-text p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: #888;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .badge-version {
+    margin-left: auto;
+    background: var(--rojo);
+    color: white;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    padding: 3px 8px;
+    letter-spacing: 1px;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  }
+
+  /* TABS */
+  .tabs {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    background: var(--gris-oscuro);
+    border-bottom: 1px solid var(--gris-borde);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+
+  .tab-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 8px;
+    background: none;
+    border: none;
+    color: #666;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab-btn.active {
+    color: var(--rojo-vivo);
+    border-bottom-color: var(--rojo-vivo);
+    background: rgba(211,47,47,0.05);
+  }
+  .tab-btn:hover:not(.active) { color: #aaa; background: rgba(255,255,255,0.03); }
+
+  /* CONTENIDO */
+  .content {
+    position: relative;
+    z-index: 5;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* PANEL / CARD */
+  .panel {
+    background: var(--gris-panel);
+    border: 1px solid var(--gris-borde);
+    border-radius: 4px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    background: var(--gris-mid);
+    padding: 8px 14px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    color: var(--naranja);
+    border-bottom: 1px solid var(--gris-borde);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-body { padding: 16px; }
+
+  /* GRID DE INPUTS */
+  .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media(max-width: 480px) { .input-grid { grid-template-columns: 1fr; } }
+  .input-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media(max-width: 600px) { .input-grid.cols-3 { grid-template-columns: 1fr 1fr; } }
+
+  /* FIELD */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #888;
+  }
+
+  .field select, .field input[type="number"] {
+    background: #0D0D0D;
+    border: 1px solid var(--gris-mid);
+    border-radius: 3px;
+    color: var(--blanco);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    padding: 9px 11px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  .field select:focus, .field input:focus { border-color: var(--rojo); }
+
+  /* RADIO BUTTONS */
+  .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .radio-opt {
+    flex: 1;
+    min-width: 60px;
+  }
+  .radio-opt input { display: none; }
+  .radio-opt label {
+    display: block;
+    text-align: center;
+    padding: 9px 6px;
+    background: #0D0D0D;
+    border: 1px solid var(--gris-mid);
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #888;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+  .radio-opt input:checked + label {
+    background: rgba(211,47,47,0.15);
+    border-color: var(--rojo);
+    color: var(--rojo-vivo);
+  }
+
+  /* BTN */
+  .btn-calc {
+    width: 100%;
+    padding: 14px;
+    background: var(--rojo);
+    border: none;
+    border-radius: 3px;
+    color: white;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 4px;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: background 0.15s, transform 0.1s;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  }
+  .btn-calc:hover { background: var(--rojo-vivo); }
+  .btn-calc:active { transform: scale(0.99); }
+
+  /* RESULTADO */
+  .result-box {
+    background: #050505;
+    border: 1px solid var(--gris-borde);
+    border-left: 3px solid var(--rojo);
+    border-radius: 3px;
+    padding: 16px;
+    margin-top: 16px;
+  }
+
+  .result-main {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .result-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #666;
+  }
+  .result-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3.5rem;
+    line-height: 1;
+    color: var(--rojo-vivo);
+    letter-spacing: 2px;
+  }
+  .result-unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: #888;
+  }
+
+  .result-breakdown {
+    margin-top: 12px;
+    border-top: 1px solid var(--gris-borde);
+    padding-top: 12px;
+    display: grid;
+    gap: 6px;
+  }
+  .breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+  }
+  .breakdown-row .bk-label { color: #666; }
+  .breakdown-row .bk-val { color: var(--amarillo); font-weight: 600; }
+
+  .status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+  .status-ok { background: rgba(0,200,83,0.15); color: var(--verde-ok); border: 1px solid var(--verde-ok); }
+  .status-warn { background: rgba(255,109,0,0.15); color: var(--alerta); border: 1px solid var(--alerta); }
+  .status-danger { background: rgba(211,47,47,0.2); color: var(--rojo-vivo); border: 1px solid var(--rojo); }
+
+  /* TABLA REFERENCIA */
+  .ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+  }
+  .ref-table th {
+    background: var(--gris-mid);
+    padding: 8px 10px;
+    text-align: left;
+    color: var(--naranja);
+    font-size: 0.6rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--gris-borde);
+  }
+  .ref-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #1a1a1a;
+    color: #ccc;
+  }
+  .ref-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .ref-table .highlight { color: var(--rojo-vivo); font-weight: 700; }
+
+  /* WATER TIMER */
+  .water-meter {
+    background: #050505;
+    border: 1px solid var(--gris-borde);
+    border-radius: 3px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+  .water-bar-container {
+    background: #111;
+    border: 1px solid var(--gris-mid);
+    border-radius: 2px;
+    height: 28px;
+    margin: 8px 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .water-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan), #0044ff);
+    transition: width 0.5s ease;
+    position: relative;
+  }
+  .water-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  }
+  .water-bar-label {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: white;
+    z-index: 1;
+    mix-blend-mode: difference;
+  }
+
+  .time-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .time-card {
+    background: var(--gris-mid);
+    border: 1px solid var(--gris-borde);
+    border-radius: 3px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .time-card .tc-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    color: #666;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .time-card .tc-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    color: var(--cyan);
+    line-height: 1;
+  }
+  .time-card .tc-unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: #555;
+  }
+
+  /* TOOLTIP / AYUDA */
+  .info-strip {
+    background: rgba(0,176,255,0.06);
+    border: 1px solid rgba(0,176,255,0.2);
+    border-radius: 3px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: #7CCFFF;
+    line-height: 1.6;
+    letter-spacing: 0.5px;
+  }
+
+  /* MULTI-LINEA */
+  .linea-block {
+    border: 1px solid var(--gris-borde);
+    border-radius: 3px;
+    padding: 14px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .linea-block-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.9rem;
+    color: var(--naranja);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .remove-linea {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(211,47,47,0.2);
+    border: 1px solid var(--rojo);
+    color: var(--rojo-vivo);
+    width: 24px;
+    height: 24px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 22px;
+    text-align: center;
+    font-family: monospace;
+  }
+  .btn-add-linea {
+    width: 100%;
+    padding: 9px;
+    background: rgba(255,102,0,0.1);
+    border: 1px dashed var(--naranja);
+    border-radius: 3px;
+    color: var(--naranja);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    cursor: pointer;
+    margin-bottom: 14px;
+    transition: background 0.15s;
+  }
+  .btn-add-linea:hover { background: rgba(255,102,0,0.18); }
+
+  /* RESULTADOS MULTI */
+  .result-row-multi {
+    background: #050505;
+    border: 1px solid var(--gris-borde);
+    border-left: 3px solid var(--naranja);
+    border-radius: 3px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .result-row-multi .rm-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #aaa;
+    letter-spacing: 1px;
+  }
+  .result-row-multi .rm-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    color: var(--naranja);
+    letter-spacing: 1px;
+  }
+
+  .total-psi-box {
+    background: linear-gradient(135deg, #1a0000, #0a0a0a);
+    border: 2px solid var(--rojo);
+    border-radius: 4px;
+    padding: 16px;
+    text-align: center;
+    margin-top: 4px;
+  }
+  .total-psi-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    color: #888;
+    text-transform: uppercase;
+  }
+  .total-psi-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4rem;
+    color: var(--rojo-vivo);
+    line-height: 1;
+    letter-spacing: 3px;
+  }
+
+  /* PASOS DEL FLUJO */
+  .paso-bloque {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+    position: relative;
+  }
+  .paso-icono {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.7rem;
+    color: white;
+    z-index: 2;
+    flex-shrink: 0;
+    letter-spacing: 0;
+  }
+  .paso-linea-v {
+    width: 2px;
+    background: var(--gris-mid);
+    margin-left: 21px;
+    min-height: 24px;
+  }
+  /* La línea vertical está entre el ícono y el siguiente bloque */
+  .paso-bloque {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .paso-bloque > .paso-icono {
+    margin-left: 0;
+  }
+  /* Layout real: ícono a la izquierda, contenido a la derecha */
+  .paso-bloque {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    grid-template-rows: auto auto;
+    gap: 0 14px;
+    margin-bottom: 0;
+  }
+  .paso-icono { grid-column: 1; grid-row: 1; }
+  .paso-linea-v {
+    grid-column: 1;
+    grid-row: 2;
+    width: 2px;
+    min-height: 20px;
+    background: var(--gris-mid);
+    margin: 0 auto;
+  }
+  .paso-contenido {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    background: var(--gris-panel);
+    border: 1px solid var(--gris-borde);
+    border-radius: 4px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+  }
+  .paso-titulo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.95rem;
+    letter-spacing: 2px;
+    color: var(--naranja);
+    margin-bottom: 4px;
+  }
+  .paso-desc {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 0.85rem;
+    color: #999;
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+  .paso-nota {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: #888;
+    margin-top: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--gris-borde);
+    padding: 6px 10px;
+    border-radius: 2px;
+  }
+
+  /* SIAMESA VISUAL */
+  .siamesa-visual {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 8px;
+    background: rgba(211,47,47,0.06);
+    border: 1px solid rgba(211,47,47,0.25);
+    border-radius: 4px;
+    padding: 12px 14px;
+    flex-wrap: wrap;
+  }
+  .siam-entrada, .siam-cuerpo, .siam-salidas { display: flex; align-items: center; gap: 4px; }
+  .siam-cuerpo { flex-direction: column; align-items: center; }
+  .siam-salidas { flex-direction: column; gap: 6px; }
+  .siam-salida { display: flex; align-items: center; gap: 6px; }
+  .siam-diam {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    background: var(--gris-mid);
+    padding: 3px 8px;
+    border-radius: 2px;
+    color: var(--naranja);
+  }
+  .siam-15 { color: var(--amarillo); }
+  .siam-flecha {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #555;
+  }
+
+
+
+  /* HIDDEN */
+  .hidden { display: none !important; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--negro); }
+  ::-webkit-scrollbar-thumb { background: var(--gris-mid); border-radius: 2px; }
+
+  /* RESPONSIVE */
+  @media(max-width: 480px) {
+    .header-text h1 { font-size: 1.5rem; }
+    .result-value { font-size: 2.8rem; }
+    .time-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <svg class="logo-icon" viewBox="0 0 48 48" fill="none">
+      <circle cx="24" cy="24" r="23" fill="#1a0000" stroke="#D32F2F" stroke-width="1.5"/>
+      <path d="M24 8 C20 14 14 18 14 26 C14 32 18.5 36.5 24 38 C29.5 36.5 34 32 34 26 C34 18 28 14 24 8Z" fill="#D32F2F" opacity="0.3"/>
+      <path d="M24 14 C22 18 18 21 18 26 C18 29.5 20.7 32.5 24 33.5 C27.3 32.5 30 29.5 30 26 C30 21 26 18 24 14Z" fill="#FF6600"/>
+      <path d="M24 20 C23 22 21 24 21 26.5 C21 28.4 22.3 30 24 30.5 C25.7 30 27 28.4 27 26.5 C27 24 25 22 24 20Z" fill="#FFD600"/>
+      <rect x="22" y="36" width="4" height="5" rx="1" fill="#D32F2F"/>
+      <rect x="18" y="40" width="12" height="2" rx="1" fill="#D32F2F"/>
+    </svg>
+    <div class="header-text">
+      <h1>HIDROKALC</h1>
+      <p>Calculadora Hidráulica · Cuerpo de Bomberos Municipales</p>
+    </div>
+    <div class="badge-version">v2.1</div>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" onclick="switchTab('linea-simple')">📐 LÍNEA SIMPLE</button>
+  <button class="tab-btn" onclick="switchTab('multi-linea')">🔗 MULTI-LÍNEA</button>
+  <button class="tab-btn" onclick="switchTab('agua')">💧 AGUA / TIEMPO</button>
+  <button class="tab-btn" onclick="switchTab('referencia')">📊 TABLAS</button>
+</nav>
+
+<div class="content">
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 1: LÍNEA SIMPLE -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div id="tab-linea-simple" class="tab-panel active">
+
+    <!-- ════════════════════════════════════ -->
+    <!-- MODO: CON SIAMESA / SIN SIAMESA     -->
+    <!-- ════════════════════════════════════ -->
+    <div class="radio-group" style="margin-bottom:16px">
+      <div class="radio-opt">
+        <input type="radio" name="modo" id="modo-siamesa" value="siamesa" checked onchange="cambiarModo()">
+        <label for="modo-siamesa" style="font-size:1rem">🔱 Con Siamesa<br><span style="font-size:0.65rem;font-weight:400;color:#888">2½" → siamesa → 2× líneas 1½"</span></label>
+      </div>
+      <div class="radio-opt">
+        <input type="radio" name="modo" id="modo-directo" value="directo" onchange="cambiarModo()">
+        <label for="modo-directo" style="font-size:1rem">➡ Línea Directa<br><span style="font-size:0.65rem;font-weight:400;color:#888">Tendido simple sin siamesa</span></label>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════ -->
+    <!-- FLUJO CON SIAMESA                   -->
+    <!-- ════════════════════════════════════ -->
+    <div id="seccion-siamesa">
+
+      <!-- PASO 1: BOMBA -->
+      <div class="paso-bloque">
+        <div class="paso-icono" style="background:var(--verde-ok)">🚒</div>
+        <div class="paso-linea-v"></div>
+        <div class="paso-contenido">
+          <div class="paso-titulo">PASO 1 — BOMBA</div>
+          <div class="paso-desc">Punto de partida. La presión que fije aquí debe vencer todo el sistema.</div>
+        </div>
+      </div>
+
+      <!-- PASO 2: TENDIDO 2½" -->
+      <div class="paso-bloque">
+        <div class="paso-icono" style="background:var(--naranja)">2½"</div>
+        <div class="paso-linea-v"></div>
+        <div class="paso-contenido">
+          <div class="paso-titulo">PASO 2 — TENDIDO PRINCIPAL 2½"</div>
+          <div class="paso-desc">Mangueras gruesas que van desde el camión hasta donde está la siamesa.<br>
+          <span style="color:#888;font-size:0.75rem">El agua que pasa aquí es la SUMA de los dos chorros juntos.</span></div>
+          <div class="input-grid" style="margin-top:10px">
+            <div class="field">
+              <label>N° de mangueras de 2½"</label>
+              <select id="cant-25" onchange="resetResult()">
+                <option value="1">1 manguera — 15 m</option>
+                <option value="2">2 mangueras — 30 m</option>
+                <option value="3" selected>3 mangueras — 45 m</option>
+                <option value="4">4 mangueras — 60 m</option>
+                <option value="5">5 mangueras — 75 m</option>
+                <option value="6">6 mangueras — 90 m</option>
+                <option value="8">8 mangueras — 120 m</option>
+                <option value="10">10 mangueras — 150 m</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Desnivel del tendido 2½" (metros)</label>
+              <input type="number" id="desnivel-25" value="0" min="-50" max="50" step="1" onchange="resetResult()" placeholder="0 = plano · + sube · − baja">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO 3: SIAMESA -->
+      <div class="paso-bloque">
+        <div class="paso-icono" style="background:var(--rojo)">🔱</div>
+        <div class="paso-linea-v"></div>
+        <div class="paso-contenido">
+          <div class="paso-titulo">PASO 3 — SIAMESA (división 2½" → 2 salidas de 1½")</div>
+          <div class="paso-desc">La siamesa está al final del tendido 2½". Aquí se divide el flujo en dos líneas de ataque de 1½".</div>
+          <div class="siamesa-visual">
+            <div class="siam-entrada">
+              <span class="siam-diam">2½"</span>
+              <span class="siam-flecha">──▶</span>
+            </div>
+            <div class="siam-cuerpo">
+              <span style="font-size:1.3rem">🔱</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--rojo-vivo);margin-top:2px">−10 PSI</span>
+            </div>
+            <div class="siam-salidas">
+              <div class="siam-salida"><span class="siam-flecha">──▶</span><span class="siam-diam siam-15">1½" Línea A</span></div>
+              <div class="siam-salida"><span class="siam-flecha">──▶</span><span class="siam-diam siam-15">1½" Línea B</span></div>
+            </div>
+          </div>
+          <div class="paso-nota">Pérdida fija: 4 PSI colector + 6 PSI reducción de diámetro = <strong style="color:var(--rojo-vivo)">10 PSI</strong></div>
+          <div class="input-grid" style="margin-top:10px">
+            <div class="field">
+              <label>Líneas activas en la siamesa</label>
+              <div class="radio-group">
+                <div class="radio-opt">
+                  <input type="radio" name="lineas-activas" id="la-2" value="2" checked onchange="resetResult()">
+                  <label for="la-2">2 líneas<br><span style="font-size:0.6rem;font-weight:400">Ataque doble</span></label>
+                </div>
+                <div class="radio-opt">
+                  <input type="radio" name="lineas-activas" id="la-1" value="1" onchange="resetResult()">
+                  <label for="la-1">1 línea<br><span style="font-size:0.6rem;font-weight:400">Ataque simple</span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO 4: LÍNEAS 1½" -->
+      <div class="paso-bloque">
+        <div class="paso-icono" style="background:var(--amarillo);color:#000">1½"</div>
+        <div class="paso-linea-v"></div>
+        <div class="paso-contenido">
+          <div class="paso-titulo">PASO 4 — LÍNEAS DE ATAQUE 1½" (cada línea por separado)</div>
+          <div class="paso-desc">Mangueras delgadas que van desde la siamesa hasta el pitón del bombero.<br>
+          <span style="color:#888;font-size:0.75rem">Cada línea lleva solo su propio caudal. Se calcula igual para A y para B.</span></div>
+          <div class="input-grid" style="margin-top:10px">
+            <div class="field">
+              <label>N° de mangueras de 1½" por línea</label>
+              <select id="cant-15" onchange="resetResult()">
+                <option value="1">1 manguera — 15 m</option>
+                <option value="2" selected>2 mangueras — 30 m</option>
+                <option value="3">3 mangueras — 45 m</option>
+                <option value="4">4 mangueras — 60 m</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>GPM que sale por cada pitón</label>
+              <select id="gpm-piton" onchange="resetResult()">
+                <option value="60">60 GPM — flujo bajo</option>
+                <option value="95" selected>95 GPM — estándar</option>
+                <option value="125">125 GPM — alto flujo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO 5: PITÓN -->
+      <div class="paso-bloque">
+        <div class="paso-icono" style="background:#222;border:2px solid var(--rojo-vivo)">🔥</div>
+        <div class="paso-contenido">
+          <div class="paso-titulo">PASO 5 — PITÓN y ELEVACIÓN</div>
+          <div class="paso-desc">Tipo de pitón y si el ataque es en altura (pisos o metros).</div>
+          <div class="input-grid" style="margin-top:10px">
+
+            <div class="field">
+              <label>Tipo de pitón (define presión)</label>
+              <div class="radio-group">
+                <div class="radio-opt">
+                  <input type="radio" name="tipo-piton" id="tp-neblina" value="100" checked onchange="resetResult(); sincronizarPiton()">
+                  <label for="tp-neblina">Neblinero<br><span style="font-size:0.6rem;font-weight:400">100 PSI (Ec. CBCR)</span></label>
+                </div>
+                <div class="radio-opt">
+                  <input type="radio" name="tipo-piton" id="tp-solido" value="50" onchange="resetResult(); sincronizarPiton()">
+                  <label for="tp-solido">Chorro sólido<br><span style="font-size:0.6rem;font-weight:400">50 PSI</span></label>
+                </div>
+                <div class="radio-opt">
+                  <input type="radio" name="tipo-piton" id="tp-custom" value="custom" onchange="resetResult(); sincronizarPiton()">
+                  <label for="tp-custom">Manual<br><span style="font-size:0.6rem;font-weight:400">definir PSI</span></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Presión requerida en pitón (PSI)</label>
+              <select id="psi-piton" onchange="resetResult()">
+                <option value="50">50 PSI — Chorro sólido</option>
+                <option value="75">75 PSI — Neblina baja presión</option>
+                <option value="100" selected>100 PSI — Neblinero estándar</option>
+                <option value="125">125 PSI — Uso intensivo</option>
+                <option value="150">150 PSI — Forestal / vehicular</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Elevación del ataque</label>
+              <div class="radio-group">
+                <div class="radio-opt">
+                  <input type="radio" name="tipo-elev" id="te-plano" value="plano" checked onchange="resetResult(); toggleElevacion()">
+                  <label for="te-plano">Plano<br><span style="font-size:0.6rem;font-weight:400">sin desnivel</span></label>
+                </div>
+                <div class="radio-opt">
+                  <input type="radio" name="tipo-elev" id="te-metros" value="metros" onchange="resetResult(); toggleElevacion()">
+                  <label for="te-metros">Metros<br><span style="font-size:0.6rem;font-weight:400">colina / rampa</span></label>
+                </div>
+                <div class="radio-opt">
+                  <input type="radio" name="tipo-elev" id="te-pisos" value="pisos" onchange="resetResult(); toggleElevacion()">
+                  <label for="te-pisos">Pisos<br><span style="font-size:0.6rem;font-weight:400">Ec. 4.16 edificio</span></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="field" id="campo-metros-elev" style="display:none">
+              <label>Desnivel total (metros · + sube · − baja)</label>
+              <input type="number" id="desnivel-ataque" value="0" min="-50" max="100" step="1" onchange="resetResult()" placeholder="metros">
+            </div>
+
+            <div class="field" id="campo-pisos-elev" style="display:none">
+              <label>Piso de operación (Ec. 4.16 — PE = 5×(pisos−1))</label>
+              <select id="piso-ataque" onchange="resetResult()">
+                <option value="2">Piso 2 → +5 PSI</option>
+                <option value="3">Piso 3 → +10 PSI</option>
+                <option value="4">Piso 4 → +15 PSI</option>
+                <option value="5">Piso 5 → +20 PSI</option>
+                <option value="6">Piso 6 → +25 PSI</option>
+                <option value="7">Piso 7 → +30 PSI</option>
+                <option value="8">Piso 8 → +35 PSI</option>
+                <option value="9">Piso 9 → +40 PSI</option>
+                <option value="10">Piso 10 → +45 PSI</option>
+              </select>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /seccion-siamesa -->
+
+    <!-- ════════════════════════════════════ -->
+    <!-- FLUJO DIRECTO (sin siamesa)          -->
+    <!-- ════════════════════════════════════ -->
+    <div id="seccion-directa" style="display:none">
+
+      <div class="paso-bloque">
+        <div class="paso-icono" style="background:var(--verde-ok)">🚒</div>
+        <div class="paso-linea-v"></div>
+        <div class="paso-contenido">
+          <div class="paso-titulo">PASO 1 — BOMBA</div>
+        </div>
+      </div>
+
+      <div class="paso-bloque">
+        <div class="paso-icono" style="background:var(--naranja)">━━</div>
+        <div class="paso-linea-v"></div>
+        <div class="paso-contenido">
+          <div class="paso-titulo">PASO 2 — TENDIDO DIRECTO</div>
+          <div class="input-grid" style="margin-top:10px">
+            <div class="field">
+              <label>Diámetro de la línea</label>
+              <div class="radio-group">
+                <div class="radio-opt"><input type="radio" name="diam-directo" id="dd-25" value="2.5" checked onchange="resetResult()"><label for="dd-25">2½"</label></div>
+                <div class="radio-opt"><input type="radio" name="diam-directo" id="dd-15" value="1.5" onchange="resetResult()"><label for="dd-15">1½"</label></div>
+              </div>
+            </div>
+            <div class="field">
+              <label>N° de mangueras en el tendido</label>
+              <select id="cant-25-d" onchange="resetResult()">
+                <option value="1">1 manguera — 15 m</option>
+                <option value="2">2 mangueras — 30 m</option>
+                <option value="3" selected>3 mangueras — 45 m</option>
+                <option value="4">4 mangueras — 60 m</option>
+                <option value="5">5 mangueras — 75 m</option>
+                <option value="6">6 mangueras — 90 m</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Desnivel (metros)</label>
+              <input type="number" id="desnivel-d" value="0" min="-50" max="50" step="1" onchange="resetResult()" placeholder="0">
+            </div>
+            <div class="field">
+              <label>GPM en el pitón</label>
+              <select id="gpm-directo" onchange="resetResult()">
+                <option value="60">60 GPM</option>
+                <option value="95">95 GPM</option>
+                <option value="125" selected>125 GPM</option>
+                <option value="150">150 GPM</option>
+                <option value="200">200 GPM</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="paso-bloque">
+        <div class="paso-icono" style="background:#222;border:2px solid var(--rojo-vivo)">🔥</div>
+        <div class="paso-contenido">
+          <div class="paso-titulo">PASO 3 — PITÓN</div>
+          <div class="input-grid" style="margin-top:10px">
+            <div class="field">
+              <label>Presión requerida en pitón (PSI)</label>
+              <select id="psi-piton-d" onchange="resetResult()">
+                <option value="50">50 PSI</option>
+                <option value="75">75 PSI</option>
+                <option value="100" selected>100 PSI</option>
+                <option value="125">125 PSI</option>
+                <option value="150">150 PSI</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /seccion-directa -->
+
+    <button class="btn-calc" onclick="calcularSimple()">▶ CALCULAR PSI EN BOMBA</button>
+
+    <div id="resultado-simple" class="hidden">
+      <div class="result-box">
+        <div class="result-label">PSI REQUERIDOS EN BOMBA</div>
+        <div class="result-main">
+          <div class="result-value" id="psi-resultado">---</div>
+          <div class="result-unit">PSI</div>
+        </div>
+        <div id="status-badge"></div>
+        <div class="result-breakdown" id="breakdown-simple"></div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 2: MULTI-LÍNEA -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div id="tab-multi-linea" class="tab-panel">
+
+    <div class="info-strip">
+      ▸ Agregue todas las líneas activas. El sistema calculará el PSI para cada una y sumará el caudal total requerido en la bomba.
+    </div>
+
+    <button class="btn-add-linea" onclick="agregarLinea()">+ AGREGAR LÍNEA DE MANGUERA</button>
+
+    <div id="lineas-container"></div>
+
+    <button class="btn-calc" onclick="calcularMulti()">▶ CALCULAR TODAS LAS LÍNEAS</button>
+
+    <div id="resultados-multi" class="hidden"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 3: AGUA / TIEMPO -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div id="tab-agua" class="tab-panel">
+
+    <div class="info-strip">
+      ▸ Ingrese el agua disponible y el caudal de operación para estimar el tiempo de trabajo.
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">💧 DISPONIBILIDAD DE AGUA</div>
+      <div class="panel-body">
+        <div class="input-grid">
+          <div class="field">
+            <label>Agua disponible (litros)</label>
+            <input type="number" id="agua-litros" value="3000" min="100" max="50000" step="100">
+          </div>
+          <div class="field">
+            <label>Unidad de agua</label>
+            <select id="agua-unidad">
+              <option value="litros" selected>Litros</option>
+              <option value="galones">Galones (US)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">🚒 LÍNEAS EN OPERACIÓN</div>
+      <div class="panel-body">
+        <div class="input-grid cols-3">
+          <div class="field">
+            <label>Líneas de 2½" activas</label>
+            <input type="number" id="lineas-25" value="0" min="0" max="4" step="1">
+          </div>
+          <div class="field">
+            <label>GPM por línea 2½"</label>
+            <select id="gpm-25">
+              <option value="125">125 GPM</option>
+              <option value="150" selected>150 GPM</option>
+              <option value="200">200 GPM</option>
+              <option value="250">250 GPM</option>
+            </select>
+          </div>
+          <div class="field" style="visibility:hidden"></div>
+          <div class="field">
+            <label>Líneas de 1½" activas</label>
+            <input type="number" id="lineas-15" value="1" min="0" max="6" step="1">
+          </div>
+          <div class="field">
+            <label>GPM por línea 1½"</label>
+            <select id="gpm-15">
+              <option value="60">60 GPM</option>
+              <option value="95" selected>95 GPM</option>
+              <option value="125">125 GPM</option>
+            </select>
+          </div>
+          <div class="field" style="visibility:hidden"></div>
+        </div>
+
+        <button class="btn-calc" onclick="calcularAgua()">▶ CALCULAR TIEMPO OPERATIVO</button>
+
+        <div id="resultado-agua" class="hidden">
+          <div class="water-meter">
+            <div class="result-label">AGUA DISPONIBLE</div>
+            <div class="water-bar-container">
+              <div class="water-bar" id="water-bar" style="width:100%">
+                <span class="water-bar-label" id="water-bar-label">100%</span>
+              </div>
+            </div>
+            <div class="time-grid" id="time-grid"></div>
+          </div>
+
+          <div id="breakdown-agua" class="result-breakdown" style="margin-top:12px; padding-top:12px; border-top: 1px solid var(--gris-borde);"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 4: TABLAS DE REFERENCIA -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div id="tab-referencia" class="tab-panel">
+
+    <div class="panel">
+      <div class="panel-title">📊 PÉRDIDA POR FRICCIÓN — MANGUERA 2½" (por tramo 15 m)</div>
+      <div class="panel-body" style="overflow-x:auto">
+        <table class="ref-table">
+          <tr><th>GPM</th><th>PSI perdido / tramo 15m</th><th>Velocidad aprox.</th><th>Uso típico</th></tr>
+          <tr><td>100</td><td class="highlight">3.5 PSI</td><td>~2.3 m/s</td><td>Ataque inicial leve</td></tr>
+          <tr><td>125</td><td class="highlight">5.5 PSI</td><td>~2.9 m/s</td><td>Estándar estructural</td></tr>
+          <tr><td>150</td><td class="highlight">7.9 PSI</td><td>~3.5 m/s</td><td>Ataque agresivo</td></tr>
+          <tr><td>200</td><td class="highlight">14 PSI</td><td>~4.6 m/s</td><td>Master stream</td></tr>
+          <tr><td>250</td><td class="highlight">21 PSI</td><td>~5.8 m/s</td><td>Defensivo pesado</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 PÉRDIDA POR FRICCIÓN — MANGUERA 1½" (por tramo 15 m)</div>
+      <div class="panel-body" style="overflow-x:auto">
+        <table class="ref-table">
+          <tr><th>GPM</th><th>PSI perdido / tramo 15m</th><th>Velocidad aprox.</th><th>Uso típico</th></tr>
+          <tr><td>60</td><td class="highlight">13 PSI</td><td>~3.0 m/s</td><td>Ataque rápido leve</td></tr>
+          <tr><td>95</td><td class="highlight">28 PSI</td><td>~4.7 m/s</td><td>Estándar 1½"</td></tr>
+          <tr><td>125</td><td class="highlight">47 PSI</td><td>~6.2 m/s</td><td>Alto flujo 1½"</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 PÉRDIDA POR ALTURA (DESNIVEL)</div>
+      <div class="panel-body" style="overflow-x:auto">
+        <table class="ref-table">
+          <tr><th>Desnivel</th><th>PSI a agregar/restar</th><th>Nota</th></tr>
+          <tr><td>+3 m (1 piso)</td><td class="highlight">+4.3 PSI</td><td>Subida aumenta presión requerida</td></tr>
+          <tr><td>+6 m (2 pisos)</td><td class="highlight">+8.7 PSI</td><td></td></tr>
+          <tr><td>+9 m (3 pisos)</td><td class="highlight">+13 PSI</td><td></td></tr>
+          <tr><td>+15 m (5 pisos)</td><td class="highlight">+21.7 PSI</td><td></td></tr>
+          <tr><td>-3 m (bajada)</td><td class="highlight">-4.3 PSI</td><td>Bajada reduce presión requerida</td></tr>
+          <tr><td colspan="3" style="color:#555; font-size:0.65rem">Fórmula: 1 metro = 1.42 PSI (0.0975 bar/m · 14.5 PSI/bar)</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 PÉRDIDAS POR ACOPLES Y ACCESORIOS</div>
+      <div class="panel-body" style="overflow-x:auto">
+        <table class="ref-table">
+          <tr><th>Componente</th><th>Pérdida aprox. (PSI)</th></tr>
+          <tr><td>Acople simple (mismo diámetro)</td><td class="highlight">3 PSI</td></tr>
+          <tr><td>Siamesa 2½"→1½" — colector (4 PSI) + reducción (6 PSI)</td><td class="highlight">10 PSI total</td></tr>
+          <tr><td>⚠ La manguera DESPUÉS de la siamesa corre en 1½"</td><td class="highlight" style="color:var(--alerta)">Fricción en 1½"</td></tr>
+          <tr><td>Válvula de bola abierta</td><td class="highlight">2–4 PSI</td></tr>
+          <tr><td>Reductor suelto 2½" a 1½" (sin siamesa)</td><td class="highlight">5–8 PSI</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 PRESIONES DE REFERENCIA NFPA 1901 / OPERACIONAL</div>
+      <div class="panel-body" style="overflow-x:auto">
+        <table class="ref-table">
+          <tr><th>Concepto</th><th>Rango</th></tr>
+          <tr><td>Presión mínima en pitón de ataque</td><td class="highlight">50–100 PSI</td></tr>
+          <tr><td>Presión máxima segura en manguera 1½"</td><td class="highlight">275 PSI</td></tr>
+          <tr><td>Presión máxima segura en manguera 2½"</td><td class="highlight">300 PSI</td></tr>
+          <tr><td>Presión máxima bomba centrifuga estándar</td><td class="highlight">250–300 PSI</td></tr>
+          <tr><td>Presión de trabajo recomendada en bomba</td><td class="highlight">≤ 200 PSI</td></tr>
+          <tr><td>Presión cavitación (mínima de entrada)</td><td class="highlight">≥ 20 PSI</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">📊 CAUDALES TÍPICOS — TIPO DE INCENDIO</div>
+      <div class="panel-body" style="overflow-x:auto">
+        <table class="ref-table">
+          <tr><th>Tipo de incendio</th><th>Caudal recomendado</th><th>Configuración típica</th></tr>
+          <tr><td>Vehículo</td><td class="highlight">60–95 GPM</td><td>1 línea 1½"</td></tr>
+          <tr><td>Estructura pequeña</td><td class="highlight">150–200 GPM</td><td>2 líneas 1½"</td></tr>
+          <tr><td>Estructura mediana</td><td class="highlight">250–400 GPM</td><td>1×2½" + 1×1½"</td></tr>
+          <tr><td>Estructura grande</td><td class="highlight">500–1000 GPM</td><td>2×2½" + apoyo</td></tr>
+          <tr><td>Forestal / interface</td><td class="highlight">50–80 GPM</td><td>1 línea 1½" forestal</td></tr>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /content -->
+
+<script>
+// ══════════════════════════════════════════════════════════
+// FÓRMULA OFICIAL ANB-CBCR: PF = C × Q² × L
+// Ecuación 4.13 del manual "Hidráulica para Maquinistas"
+// C = coeficiente Tabla 4.2 | Q = GPM/100 | L = pies/100
+// ══════════════════════════════════════════════════════════
+
+// Tabla 4.2 — Coeficientes para tendido SENCILLO
+const C_SENCILLO = {
+  '1.0':  150,    // 1 pulgada
+  '1.75': 15.5,   // 1¾ pulgada
+  '1.5':  15.5,   // 1½ pulgada (mismo coeficiente que 1¾ en tablas CBCR)
+  '2.5':  2,      // 2½ pulgadas
+  '3.0':  0.8,    // 3" con acoples de 2½"
+  '4.5':  0.1,
+  '5.0':  0.08,
+  '6.0':  0.05
+};
+
+// Tabla 4.3 — Coeficientes para tendidos BIFURCADOS/PARALELOS
+const C_BIFURCADO = {
+  'dos_25':       0.5,   // Dos líneas de 2½"
+  'tres_25':      0.22,  // Tres líneas de 2½"
+  'dos_3':        0.2,   // Dos de 3" con acoples 2½"
+  'tres_3':       0.08,  // Tres de 3" con acoples 2½"
+  'una3_una25':   0.3,   // Una 3" con acoples 2½" + una 2½"
+  'dos25_una3':   0.16   // Dos 2½" + una 3" con acoples 2½"
+};
+
+// Pérdida de dispositivos (Sección "Pérdida de presión del dispositivo"):
+// 0 PSI si flujo < 350 GPM
+// 10 PSI si flujo ≥ 350 GPM (siamesas, "y" griegas, reducciones, múltiples)
+// 25 PSI para chorros maestros (siempre)
+function perdidaDispositivo(gpmTotal) {
+  return gpmTotal >= 350 ? 10 : 0;
+}
+
+// Conversión: 1 metro = 3.2808 pies | 1 pie = 0.3048 m
+// Fórmula elevación Ec. 4.14: PE = 0.5 × H(pies) = 0.5 × metros × 3.2808
+const PSI_POR_PIE  = 0.5;      // Ec. 4.14 — PE = 0.5 H (pies)
+const PIES_POR_METRO = 3.2808;
+
+// ── Función principal PF = CQ²L ─────────────────────────
+// diametro: clave de C_SENCILLO | gpm: GPM | metrosTendido: metros reales
+function calcPF(diametro, gpm, metrosTendido) {
+  const C = C_SENCILLO[diametro] || 2;
+  const piesTendido = metrosTendido * PIES_POR_METRO;
+  const Q = gpm / 100;
+  const L = piesTendido / 100;
+  return C * Q * Q * L;
+}
+
+// ── Pérdida por elevación Ec. 4.14 ─────────────────────
+// metros positivos = sube (pérdida) | negativos = baja (ganancia)
+function calcPE(metros) {
+  const pies = metros * PIES_POR_METRO;
+  return PSI_POR_PIE * pies;  // positivo = pérdida, negativo = ganancia
+}
+
+// ── Sincroniza selector de PSI con tipo de pitón ────────
+function sincronizarPiton() {
+  const tipo = document.querySelector('input[name="tipo-piton"]:checked').value;
+  const sel = document.getElementById('psi-piton');
+  if (tipo === '50') sel.value = '50';
+  else if (tipo === '100') sel.value = '100';
+  // 'custom' deja libre al usuario
+}
+
+// ── Muestra/oculta campos de elevación ──────────────────
+function toggleElevacion() {
+  const tipo = document.querySelector('input[name="tipo-elev"]:checked').value;
+  document.getElementById('campo-metros-elev').style.display = tipo === 'metros' ? '' : 'none';
+  document.getElementById('campo-pisos-elev').style.display  = tipo === 'pisos'  ? '' : 'none';
+}
+
+
+
+
+
+// ══════════════════════════════════════════════════════════
+// CAMBIAR MODO (siamesa / directo)
+// ══════════════════════════════════════════════════════════
+function cambiarModo() {
+  const modo = document.querySelector('input[name="modo"]:checked').value;
+  document.getElementById('seccion-siamesa').style.display = modo === 'siamesa' ? '' : 'none';
+  document.getElementById('seccion-directa').style.display = modo === 'directo' ? '' : 'none';
+  resetResult();
+  actualizarDiagrama();
+}
+
+// ══════════════════════════════════════════════════════════
+// DIAGRAMA ASCII DEL TENDIDO
+// ══════════════════════════════════════════════════════════
+function actualizarDiagrama() {
+  const modo = document.querySelector('input[name="modo"]:checked').value;
+  const cant25El = document.getElementById('cant-25');
+  if (!cant25El) return;
+  const cant25 = parseInt(cant25El.value);
+  const metros25 = cant25 * 15;
+  const el = document.getElementById('diagrama-tendido');
+  if (!el) return;
+
+  if (modo === 'siamesa') {
+    const cant15 = parseInt(document.getElementById('cant-15').value);
+    const metros15 = cant15 * 15;
+    const lineasActEl = document.querySelector('input[name="lineas-activas"]:checked');
+    const lineasAct = lineasActEl ? parseInt(lineasActEl.value) : 2;
+    const lineaB = lineasAct === 2
+      ? `  └─ <span style="color:var(--cyan)">Línea B:</span> ${cant15}× manguera 1½" (${metros15}m) ──▶ 🔥 PITÓN B`
+      : `  └─ <span style="color:#444">Línea B: cerrada</span>`;
+    el.innerHTML =
+      `<span style="color:var(--verde-ok)">🚒 BOMBA</span>\n` +
+      `  │\n` +
+      `  └─ <span style="color:var(--naranja)">Tendido 2½":</span> ${cant25}× manguera (${metros25}m)\n` +
+      `  │\n` +
+      `  ▼\n` +
+      `<span style="color:var(--rojo-vivo)">🔱 SIAMESA</span> <span style="color:#555">(2½" → 2× 1½")</span>\n` +
+      `  ├─ <span style="color:var(--amarillo)">Línea A:</span> ${cant15}× manguera 1½" (${metros15}m) ──▶ 🔥 PITÓN A\n` +
+      lineaB;
+  } else {
+    const diamEl = document.querySelector('input[name="diam-directo"]:checked');
+    const diam = diamEl ? diamEl.value : '2.5';
+    el.innerHTML =
+      `<span style="color:var(--verde-ok)">🚒 BOMBA</span>\n` +
+      `  │\n` +
+      `  └─ <span style="color:var(--naranja)">Tendido ${diam}":</span> ${cant25}× manguera (${metros25}m) ──▶ 🔥 PITÓN`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// CALCULAR — despacha según modo
+// ══════════════════════════════════════════════════════════
+function calcularSimple() {
+  const modo = document.querySelector('input[name="modo"]:checked').value;
+  if (modo === 'siamesa') calcularConSiamesa();
+  else calcularDirecto();
+}
+
+// ══════════════════════════════════════════════════════════
+// ESCENARIO PRINCIPAL: BOMBA → tendido 2½" → SIAMESA → 2× 1½" → pitones
+// ══════════════════════════════════════════════════════════
+// BOMBA → tendido 2½" → SIAMESA → 2× 1½" → pitones
+// Ec. 4.13 PF=CQ²L  |  Ec. 4.14 PE=0.5H  |  Ec. 4.17 PDB=Pb+PPT
+function calcularConSiamesa() {
+  const cant25    = parseInt(document.getElementById('cant-25').value);
+  const desn25    = parseFloat(document.getElementById('desnivel-25').value) || 0;
+  const cant15    = parseInt(document.getElementById('cant-15').value);
+  const psiPiton  = parseInt(document.getElementById('psi-piton').value);
+  const gpmPiton  = parseInt(document.getElementById('gpm-piton').value);
+  const lineasAct = parseInt(document.querySelector('input[name="lineas-activas"]:checked').value);
+
+  // ── Elevación del ataque (Ec. 4.14 metros / Ec. 4.16 pisos) ──
+  const tipoElev = document.querySelector('input[name="tipo-elev"]:checked').value;
+  let PE_ataque = 0, peLabel = 'Sin desnivel';
+  if (tipoElev === 'metros') {
+    const m = parseFloat(document.getElementById('desnivel-ataque').value) || 0;
+    PE_ataque = 0.5 * m * PIES_POR_METRO;  // Ec. 4.14
+    peLabel = `${m>=0?'+':''}${m}m × 3.28 × 0.5 = ${PE_ataque.toFixed(1)} PSI`;
+  } else if (tipoElev === 'pisos') {
+    const pisos = parseInt(document.getElementById('piso-ataque').value);
+    PE_ataque = 5 * (pisos - 1);  // Ec. 4.16
+    peLabel = `5 PSI × (Piso ${pisos} − 1) = ${PE_ataque} PSI`;
+  }
+
+  const metros25   = cant25 * 15;
+  const metros15   = cant15 * 15;
+  const pies25     = metros25 * PIES_POR_METRO;
+  const pies15     = metros15 * PIES_POR_METRO;
+  const gpmTotal25 = gpmPiton * lineasAct;
+
+  // PF líneas 1½" — C=15.5 (Tabla 4.2), Q=gpmPiton/100, L=pies15/100
+  const C15 = 15.5, Q15 = gpmPiton/100, L15 = pies15/100;
+  const PF15 = C15 * Q15 * Q15 * L15;
+
+  // Siamesa — dispositivo: 10 PSI si flujo ≥ 350 GPM, 0 si < 350 (manual CBCR pág.41)
+  const SIAMESA_PSI = perdidaDispositivo(gpmTotal25);
+
+  // PF tendido 2½" — C=2 (Tabla 4.2), Q=gpmTotal25/100, L=pies25/100
+  const C25 = 2, Q25 = gpmTotal25/100, L25 = pies25/100;
+  const PF25 = C25 * Q25 * Q25 * L25;
+
+  // PE tendido 2½" — Ec. 4.14: PE = 0.5 × H(pies)
+  const PE_tendido = 0.5 * desn25 * PIES_POR_METRO;
+
+  const PPT = PF15 + SIAMESA_PSI + PF25 + PE_tendido + PE_ataque;
+  const PDB = Math.ceil(psiPiton + PPT);
+
+  let statusClass, statusTxt;
+  if (PDB <= 150)      { statusClass = 'status-ok';     statusTxt = '✓ OPERACIÓN NORMAL'; }
+  else if (PDB <= 200) { statusClass = 'status-warn';   statusTxt = '⚠ PRESIÓN ELEVADA — VERIFICAR CAPACIDAD'; }
+  else                 { statusClass = 'status-danger'; statusTxt = '✖ PRESIÓN CRÍTICA — REDUCIR TENDIDO'; }
+
+  document.getElementById('psi-resultado').textContent = PDB;
+  document.getElementById('status-badge').innerHTML = `<span class="status-badge ${statusClass}">${statusTxt}</span>`;
+
+  const lpmTotal = (gpmTotal25 * 3.785).toFixed(0);
+  const siamesaNota = SIAMESA_PSI === 0
+    ? `0 PSI <span style="color:#555">(flujo ${gpmTotal25} GPM &lt; 350 — sin pérdida)</span>`
+    : `10 PSI <span style="color:#555">(flujo ${gpmTotal25} GPM ≥ 350)</span>`;
+
+  document.getElementById('breakdown-simple').innerHTML = `
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:var(--cyan);margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed #222">
+      PDB = Pb + PPT &nbsp;|&nbsp; PF = C × Q² × L &nbsp;(Ec. 4.13 / 4.17 — ANB CBCR)
+    </div>
+
+    <div class="breakdown-row"><span class="bk-label">① Pb — Presión en pitón (${document.querySelector('input[name="tipo-piton"]:checked').value === '50' ? 'Chorro sólido' : 'Neblinero'})</span><span class="bk-val">${psiPiton} PSI</span></div>
+
+    <div style="background:#080808;border:1px solid #1e1e1e;border-radius:3px;padding:8px 10px;margin:6px 0;font-family:'JetBrains Mono',monospace;font-size:0.65rem">
+      <div style="color:#aaa;margin-bottom:3px">② PF<sub>1½</sub> = C × Q² × L</div>
+      <div style="color:#666">= ${C15} × (${gpmPiton}/100)² × (${pies15.toFixed(1)}ft/100)</div>
+      <div style="color:#666">= ${C15} × ${Q15.toFixed(4)} × ${L15.toFixed(4)}</div>
+      <div style="color:var(--amarillo);font-weight:700">= ${PF15.toFixed(1)} PSI <span style="color:#555;font-weight:400">· ${metros15}m · ${gpmPiton} GPM/línea · ${cant15} manguera${cant15>1?'s':''}</span></div>
+    </div>
+
+    <div class="breakdown-row"><span class="bk-label">② PF líneas ataque 1½" (C=15.5)</span><span class="bk-val">+${PF15.toFixed(1)} PSI</span></div>
+    <div class="breakdown-row"><span class="bk-label">③ Pérdida siamesa (dispositivo — pág. 41)</span><span class="bk-val">+${siamesaNota}</span></div>
+
+    <div style="background:#080808;border:1px solid #1e1e1e;border-radius:3px;padding:8px 10px;margin:6px 0;font-family:'JetBrains Mono',monospace;font-size:0.65rem">
+      <div style="color:#aaa;margin-bottom:3px">④ PF<sub>2½</sub> = C × Q² × L</div>
+      <div style="color:#666">= ${C25} × (${gpmTotal25}/100)² × (${pies25.toFixed(1)}ft/100)</div>
+      <div style="color:#666">= ${C25} × ${Q25.toFixed(4)} × ${L25.toFixed(4)}</div>
+      <div style="color:var(--naranja);font-weight:700">= ${PF25.toFixed(1)} PSI <span style="color:#555;font-weight:400">· ${metros25}m · ${gpmTotal25} GPM (${lineasAct}×${gpmPiton}) · ${cant25} manguera${cant25>1?'s':''}</span></div>
+    </div>
+
+    <div class="breakdown-row"><span class="bk-label">④ PF tendido 2½" (C=2)</span><span class="bk-val">+${PF25.toFixed(1)} PSI</span></div>
+    <div class="breakdown-row"><span class="bk-label">⑤ PE desnivel tendido (${desn25>=0?'+':''}${desn25}m · Ec.4.14)</span><span class="bk-val">${PE_tendido>=0?'+':''}${PE_tendido.toFixed(1)} PSI</span></div>
+    <div class="breakdown-row"><span class="bk-label">⑥ PE elevación ataque (${tipoElev === 'pisos' ? 'Ec.4.16' : tipoElev === 'metros' ? 'Ec.4.14' : 'plano'})</span><span class="bk-val">${PE_ataque>=0?'+':''}${PE_ataque.toFixed(1)} PSI</span></div>
+
+    <div style="background:rgba(211,47,47,0.08);border:1px solid rgba(211,47,47,0.3);border-radius:3px;padding:8px 12px;margin-top:10px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:#888">PPT = ${PF15.toFixed(1)} + ${SIAMESA_PSI} + ${PF25.toFixed(1)} + ${PE_tendido.toFixed(1)} + ${PE_ataque.toFixed(1)} = <span style="color:var(--blanco)">${PPT.toFixed(1)} PSI</span></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:#888;margin-top:2px">PDB = ${psiPiton} + ${PPT.toFixed(1)} = <span style="color:var(--rojo-vivo);font-size:0.75rem;font-weight:700">${PDB} PSI</span></div>
+    </div>
+
+    <div class="breakdown-row" style="margin-top:8px"><span class="bk-label">Caudal total en bomba</span><span class="bk-val">${gpmTotal25} GPM · ${lpmTotal} L/min</span></div>
+    <div class="breakdown-row"><span class="bk-label">Tendido 2½"</span><span class="bk-val">${metros25}m (${cant25} mangueras)</span></div>
+    <div class="breakdown-row"><span class="bk-label">Líneas 1½" c/u</span><span class="bk-val">${metros15}m (${cant15} mangueras) × ${lineasAct}</span></div>
+  `;
+  document.getElementById('resultado-simple').classList.remove('hidden');
+}
+
+// BOMBA → tendido directo → pitón (sin siamesa)
+// Ec. 4.13 PF=CQ²L | Ec. 4.17 PDB=Pb+PPT
+function calcularDirecto() {
+  const cant     = parseInt(document.getElementById('cant-25-d').value);
+  const desn     = parseFloat(document.getElementById('desnivel-d').value) || 0;
+  const diam     = document.querySelector('input[name="diam-directo"]:checked').value;
+  const psiPiton = parseInt(document.getElementById('psi-piton-d').value);
+  const gpm      = parseInt(document.getElementById('gpm-directo').value);
+
+  const metros  = cant * 15;
+  const pies    = metros * PIES_POR_METRO;
+  const C       = C_SENCILLO[diam] || 2;
+  const Q       = gpm / 100;
+  const L       = pies / 100;
+  const PF      = C * Q * Q * L;
+  const PE      = calcPE(desn);
+  const PPT     = PF + PE;
+  const PDB     = Math.ceil(psiPiton + PPT);
+
+  let statusClass, statusTxt;
+  if (PDB <= 150)      { statusClass = 'status-ok';     statusTxt = '✓ OPERACIÓN NORMAL'; }
+  else if (PDB <= 200) { statusClass = 'status-warn';   statusTxt = '⚠ PRESIÓN ELEVADA'; }
+  else                 { statusClass = 'status-danger'; statusTxt = '✖ PRESIÓN CRÍTICA — REDUCIR TENDIDO'; }
+
+  document.getElementById('psi-resultado').textContent = PDB;
+  document.getElementById('status-badge').innerHTML = `<span class="status-badge ${statusClass}">${statusTxt}</span>`;
+
+  document.getElementById('breakdown-simple').innerHTML = `
+    <div class="breakdown-row" style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed #222">
+      <span class="bk-label" style="color:var(--cyan)">PDB = Pb + PPT &nbsp;|&nbsp; PF = C × Q² × L &nbsp;(Ec. 4.13 / 4.17 — ANB)</span>
+    </div>
+    <div class="breakdown-row"><span class="bk-label">Pb — Presión en pitón</span><span class="bk-val">${psiPiton} PSI</span></div>
+    <div style="background:#080808;border:1px solid #1e1e1e;border-radius:3px;padding:7px 10px;margin:5px 0;font-family:'JetBrains Mono',monospace;font-size:0.63rem;color:#777">
+      PF = ${C} × (${gpm}/100)² × (${pies.toFixed(0)}ft/100) = <span style="color:var(--naranja)">${PF.toFixed(1)} PSI</span>
+      <span style="display:block;color:#444">${metros}m = ${pies.toFixed(0)}ft | ${gpm} GPM | manguera ${diam}"</span>
+    </div>
+    <div class="breakdown-row"><span class="bk-label">PF fricción tendido ${diam}"</span><span class="bk-val">+${PF.toFixed(1)} PSI</span></div>
+    <div class="breakdown-row"><span class="bk-label">PE elevación (${desn>=0?'+':''}${desn}m × 3.28 × 0.5)</span><span class="bk-val">${PE>=0?'+':''}${PE.toFixed(1)} PSI</span></div>
+    <div class="breakdown-row" style="border-top:1px solid #2a2a2a;margin-top:6px;padding-top:8px">
+      <span class="bk-label" style="color:var(--blanco)">PPT total</span><span class="bk-val" style="color:var(--blanco)">${PPT.toFixed(1)} PSI</span>
+    </div>
+    <div class="breakdown-row"><span class="bk-label">Longitud total</span><span class="bk-val">${metros}m — ${diam}"</span></div>
+  `;
+  document.getElementById('resultado-simple').classList.remove('hidden');
+}
+
+function resetResult() {
+  document.getElementById('resultado-simple').classList.add('hidden');
+}
+
+// ══════════════════════════════════════════════════════════
+// MULTI-LÍNEA
+// ══════════════════════════════════════════════════════════
+let lineaCount = 0;
+
+function agregarLinea() {
+  lineaCount++;
+  const id = lineaCount;
+  const div = document.createElement('div');
+  div.className = 'linea-block';
+  div.id = `linea-block-${id}`;
+  div.innerHTML = `
+    <div class="linea-block-title">LÍNEA ${id}</div>
+    <button class="remove-linea" onclick="eliminarLinea(${id})">×</button>
+    <div class="input-grid">
+      <div class="field">
+        <label>Diámetro</label>
+        <div class="radio-group">
+          <div class="radio-opt"><input type="radio" name="ml-diam-${id}" id="ml-25-${id}" value="2.5" checked><label for="ml-25-${id}">2½"</label></div>
+          <div class="radio-opt"><input type="radio" name="ml-diam-${id}" id="ml-15-${id}" value="1.5"><label for="ml-15-${id}">1½"</label></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Acople</label>
+        <div class="radio-group">
+          <div class="radio-opt"><input type="radio" name="ml-ac-${id}" id="ml-as-${id}" value="simple" checked><label for="ml-as-${id}">Simple</label></div>
+          <div class="radio-opt"><input type="radio" name="ml-ac-${id}" id="ml-asm-${id}" value="siamesa"><label for="ml-asm-${id}">Siamesa</label></div>
+        </div>
+      </div>
+      <div class="field">
+        <label>N° mangueras</label>
+        <select id="ml-cant-${id}">
+          <option value="1">1 — 15m</option><option value="2">2 — 30m</option>
+          <option value="3" selected>3 — 45m</option><option value="4">4 — 60m</option>
+          <option value="5">5 — 75m</option><option value="6">6 — 90m</option>
+          <option value="8">8 — 120m</option><option value="10">10 — 150m</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Presión en pitón (PSI)</label>
+        <select id="ml-piton-${id}">
+          <option value="50">50 PSI</option><option value="75">75 PSI</option>
+          <option value="100" selected>100 PSI</option><option value="125">125 PSI</option>
+          <option value="150">150 PSI</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Desnivel (m)</label>
+        <input type="number" id="ml-desn-${id}" value="0" min="-50" max="50" step="1">
+      </div>
+      <div class="field">
+        <label>Caudal GPM</label>
+        <select id="ml-gpm-${id}">
+          <option value="60">60 GPM</option><option value="95" selected>95 GPM</option>
+          <option value="125">125 GPM</option><option value="150">150 GPM</option>
+          <option value="200">200 GPM</option><option value="250">250 GPM</option>
+        </select>
+      </div>
+    </div>
+  `;
+  document.getElementById('lineas-container').appendChild(div);
+  document.getElementById('resultados-multi').classList.add('hidden');
+}
+
+function eliminarLinea(id) {
+  const el = document.getElementById(`linea-block-${id}`);
+  if (el) el.remove();
+  document.getElementById('resultados-multi').classList.add('hidden');
+}
+
+function calcularMulti() {
+  const contenedor = document.getElementById('lineas-container');
+  const bloques = contenedor.querySelectorAll('.linea-block');
+  
+  if (bloques.length === 0) {
+    alert('Agregue al menos una línea de manguera.');
+    return;
+  }
+
+  let html = '';
+  let caudaTotal = 0;
+  let maxPsi = 0;
+
+  bloques.forEach((bloque, idx) => {
+    const id = bloque.id.replace('linea-block-', '');
+    const diametroEntrada = document.querySelector(`input[name="ml-diam-${id}"]:checked`).value;
+    const acople = document.querySelector(`input[name="ml-ac-${id}"]:checked`).value;
+    const cantidad = parseInt(document.getElementById(`ml-cant-${id}`).value);
+    const psiPiton = parseInt(document.getElementById(`ml-piton-${id}`).value);
+    const desnivel = parseFloat(document.getElementById(`ml-desn-${id}`).value) || 0;
+    const gpm = parseInt(document.getElementById(`ml-gpm-${id}`).value);
+
+    // Siamesa fuerza 1½" en la manguera de tendido
+    const diamEfectivo = diametroEfectivo(diametroEntrada, acople);
+    const siamesaActiva = acople === 'siamesa';
+
+    const perdidaFric = getPerdidaFriccion(diamEfectivo, gpm) * cantidad;
+    const perdidaAlt = desnivel * PSI_POR_METRO;
+    const perdidaAc = PERDIDA_ACOPLE[acople];
+    const psiTotal = Math.ceil(psiPiton + perdidaFric + perdidaAlt + perdidaAc);
+
+    caudaTotal += gpm;
+    if (psiTotal > maxPsi) maxPsi = psiTotal;
+
+    const etiquetaDiam = siamesaActiva
+      ? `${diametroEntrada}"→${diamEfectivo}" (siamesa)`
+      : `${diametroEntrada}"`;
+
+    const notaSiam = siamesaActiva
+      ? `<span style="color:var(--alerta)"> · ⚠ Tendido en 1½"</span>`
+      : '';
+
+    html += `
+      <div class="result-row-multi">
+        <div>
+          <div class="rm-label">LÍNEA ${idx+1} — ${etiquetaDiam} · ${cantidad}×15m · ${gpm} GPM · ${acople}${notaSiam}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:#555;margin-top:2px">
+            Pitón ${psiPiton} + Fricción ${perdidaFric.toFixed(0)} + Altura ${perdidaAlt.toFixed(1)} + Acople ${perdidaAc} PSI
+          </div>
+        </div>
+        <div class="rm-val">${psiTotal} PSI</div>
+      </div>`;
+  });
+
+  html += `
+    <div class="total-psi-box">
+      <div class="total-psi-label">CAUDAL TOTAL EN BOMBA</div>
+      <div class="total-psi-val">${caudaTotal} <span style="font-size:1.5rem;color:#888">GPM</span></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:#555;margin-top:4px">
+        ${(caudaTotal * 3.785).toFixed(0)} L/min · ${bloques.length} línea${bloques.length>1?'s':''} activa${bloques.length>1?'s':''}
+      </div>
+      <div style="margin-top:10px">
+        <div class="total-psi-label">PSI MÁXIMO REQUERIDO</div>
+        <div class="total-psi-val">${maxPsi}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.6rem;color:#555">PSI — Regular bomba a esta presión</div>
+      </div>
+    </div>`;
+
+  const res = document.getElementById('resultados-multi');
+  res.innerHTML = html;
+  res.classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════════
+// AGUA / TIEMPO
+// ══════════════════════════════════════════════════════════
+function calcularAgua() {
+  let litros = parseFloat(document.getElementById('agua-litros').value);
+  const unidad = document.getElementById('agua-unidad').value;
+  
+  if (unidad === 'galones') litros = litros * 3.785;
+
+  const lin25 = parseInt(document.getElementById('lineas-25').value) || 0;
+  const gpm25 = parseInt(document.getElementById('gpm-25').value);
+  const lin15 = parseInt(document.getElementById('lineas-15').value) || 0;
+  const gpm15 = parseInt(document.getElementById('gpm-15').value);
+
+  const caudGPM = (lin25 * gpm25) + (lin15 * gpm15);
+  const caudLPM = caudGPM * 3.785;
+
+  if (caudLPM === 0) { alert('Configure al menos una línea activa.'); return; }
+
+  const minutos = litros / caudLPM;
+  const segundos = minutos * 60;
+  const min_floor = Math.floor(minutos);
+  const seg_resto = Math.round((minutos - min_floor) * 60);
+
+  // Con reserva 20%
+  const minReserva = (litros * 0.8) / caudLPM;
+  const minReserva_floor = Math.floor(minReserva);
+
+  // Alerta 50% agua
+  const minMitad = (litros * 0.5) / caudLPM;
+
+  document.getElementById('time-grid').innerHTML = `
+    <div class="time-card">
+      <span class="tc-label">Tiempo total</span>
+      <div class="tc-val">${min_floor}<span class="tc-unit">m ${seg_resto}s</span></div>
+    </div>
+    <div class="time-card">
+      <span class="tc-label">Con reserva 20%</span>
+      <div class="tc-val" style="color:var(--alerta)">${minReserva_floor}<span class="tc-unit">min</span></div>
+    </div>
+    <div class="time-card">
+      <span class="tc-label">Alerta 50% agua</span>
+      <div class="tc-val" style="color:var(--amarillo)">${Math.floor(minMitad)}<span class="tc-unit">min</span></div>
+    </div>
+  `;
+
+  document.getElementById('breakdown-agua').innerHTML = `
+    <div class="breakdown-row"><span class="bk-label">Agua disponible</span><span class="bk-val">${litros.toFixed(0)} L</span></div>
+    <div class="breakdown-row"><span class="bk-label">Caudal total</span><span class="bk-val">${caudGPM} GPM · ${caudLPM.toFixed(0)} L/min</span></div>
+    <div class="breakdown-row"><span class="bk-label">Líneas 2½" (${lin25} × ${gpm25} GPM)</span><span class="bk-val">${lin25*gpm25} GPM</span></div>
+    <div class="breakdown-row"><span class="bk-label">Líneas 1½" (${lin15} × ${gpm15} GPM)</span><span class="bk-val">${lin15*gpm15} GPM</span></div>
+  `;
+
+  // Barra visual
+  setTimeout(() => {
+    document.getElementById('water-bar').style.width = '100%';
+    document.getElementById('water-bar-label').textContent = `${litros.toFixed(0)} L`;
+  }, 100);
+
+  document.getElementById('resultado-agua').classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════════════
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  agregarLinea();
+  actualizarDiagrama();
+});
+</script>
+
+</body>
+</html>
